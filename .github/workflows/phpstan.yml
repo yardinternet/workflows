@@ -26,7 +26,10 @@ jobs:
               run: composer install --prefer-dist --no-interaction
 
             - name: Dirty fix for previously defined function in packages php stubs
-              run: [ -f ./vendor/php-stubs/wordpress-stubs/wordpress-stubs.php ] && sed -i -e 's#function __(#function ____(#' ./vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+              run: |
+                if [ -f ./vendor/php-stubs/wordpress-stubs/wordpress-stubs.php ]; then
+                  sed -i -e 's#function __(#function ____(#' ./vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+                fi
 
             - name: Run PHPStan
               run: ./vendor/bin/phpstan --error-format=github
