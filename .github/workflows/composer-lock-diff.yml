@@ -1,9 +1,7 @@
 name: Composer Diff
 
 on:
-  workflow_call:
-    paths:
-      - 'composer.lock'
+  - workflow_call
 
 jobs:
   composer-diff:
