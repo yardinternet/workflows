@@ -25,7 +25,7 @@ jobs:
             - name: Install composer dependencies
               run: composer install --prefer-dist --no-interaction
 
-            - name: Dirty fix for previously defined function (packages using php-stubs)
+            - name: Dirty fix for previously defined function in packages php stubs
               run: [ -f ./vendor/php-stubs/wordpress-stubs/wordpress-stubs.php ] && sed -i -e 's#function __(#function ____(#' ./vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
 
             - name: Run PHPStan
