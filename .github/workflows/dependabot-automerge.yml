@@ -1,4 +1,5 @@
 name: Dependabot automerge
+
 on:
     - workflow_call
 
