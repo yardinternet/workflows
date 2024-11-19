@@ -33,3 +33,18 @@ Github Actions used in projects of the WordPress team.
    We reference the work flow in `uses` with the following schema: `{owner}/{repo}/.github/workflows/{filename}@{ref}`.
    Also make sure to pass on the secrets: `secrets: inherit`.
    
+### run-laravel-testbench-tests.yml
+
+When calling the `run-laravel-testbench-tests.yml` workflow one can use `with` to pass version settings.
+
+```yaml
+
+jobs:
+  test:
+    uses: yardinternet/workflows/.github/workflows/skeleton-package-run-tests.yml@main
+    with:
+      php-versions: '["8.1"]'
+      laravel-versions: '["10.*"]'
+      testbench-versions: '["8.*"]'
+    secrets: inherit
+```

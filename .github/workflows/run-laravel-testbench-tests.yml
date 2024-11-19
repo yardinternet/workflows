@@ -1,4 +1,4 @@
-name: Skeleton Package run test
+name: Run Laravel Testbench tests
 
 on:
   workflow_call:
