@@ -4,9 +4,14 @@ on:
   workflow_call:
     inputs:
       php-versions:
+        description: 'Json array of PHP versions to use in matrix'
         default: '["8.1","8.2"]'
-        required: true
         type: string
+      laravel-versions:
+        description: 'Json array of Laravel versions to use in matrix'
+        default: '["10.*"]'
+        type: string
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -15,8 +20,8 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest]
-        php: ${{ fromJson(inputs.php-versions) }}
-        laravel: [10.*]
+        php: ${{ fromJSON(inputs.php-versions) }}
+        laravel: ${{ fromJSON(inputs.laravel-versions) }}
         include:
           - laravel: 10.*
             testbench: 8.*
