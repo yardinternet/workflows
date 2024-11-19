@@ -1,0 +1,73 @@
+name: Run Laravel Testbench tests
+
+on:
+  workflow_call:
+    inputs:
+      php-versions:
+        description: 'Json array of PHP versions'
+        default: '["8.1","8.2"]'
+        type: string
+      laravel-versions:
+        description: 'Json array of Laravel versions'
+        default: '["10.*"]'
+        type: string
+      testbench-versions:
+        description: 'Json array of testbench versions'
+        default: '["8.*"]'
+        type: string
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest]
+        php: ${{ fromJSON(inputs.php-versions) }}
+        laravel: ${{ fromJSON(inputs.laravel-versions) }}
+        testbench: ${{ fromJSON(inputs.testbench-versions) }}
+
+    name: PHP${{ matrix.php }} - Laravel${{ matrix.laravel }}
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo, xdebug
+          coverage: xdebug
+          tools: composer:v2
+        env:
+          COMPOSER_TOKEN: ${{ secrets.YARD_BOT_PAT }}
+
+      - name: Setup problem matchers
+        run: |
+          echo "::add-matcher::${{ runner.tool_cache }}/php.json"
+          echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --prefer-dist --no-interaction
+
+      - name: List Installed Dependencies
+        run: composer show -D
+
+      - name: Execute tests
+        run: vendor/bin/pest --coverage-clover=coverage.xml
+
+      - name: Coverage Report as Comment (Clover)
+        if: github.event_name == 'pull_request'
+        uses: lucassabreu/comment-coverage-clover@main
+        with:
+          file: coverage.xml
