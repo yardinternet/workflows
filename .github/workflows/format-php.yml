@@ -34,7 +34,7 @@ jobs:
       - name: Install composer dependencies
         run: composer install --prefer-dist --no-interaction
 
-      - name: Run PHPStan
+      - name: Run PHP CS Fixer
         run: ./vendor/bin/php-cs-fixer fix
 
       - uses: stefanzweifel/git-auto-commit-action@v5
