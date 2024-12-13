@@ -41,10 +41,24 @@ When calling the `run-laravel-testbench-tests.yml` workflow one can use `with` t
 
 jobs:
   test:
-    uses: yardinternet/workflows/.github/workflows/skeleton-package-run-tests.yml@main
+    uses: yardinternet/workflows/.github/workflows/run-laravel-testbench-tests.yml@main
     with:
       php-versions: '["8.1"]'
       laravel-versions: '["10.*"]'
       testbench-versions: '["8.*"]'
+    secrets: inherit
+```
+
+### run-pest-tests.yml
+
+This alternative test runner can be used in packages that are not Laravel-based. When calling the `run-pest-tests.yml` workflow one can use `with` to pass version settings.
+
+```yaml
+
+jobs:
+  test:
+    uses: yardinternet/workflows/.github/workflows/run-pest-tests.yml@main
+    with:
+      php-versions: '["8.1"]'
     secrets: inherit
 ```
