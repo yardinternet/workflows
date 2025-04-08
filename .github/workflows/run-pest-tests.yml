@@ -43,6 +43,15 @@ jobs:
           tools: composer:v2
         env:
           COMPOSER_TOKEN: ${{ secrets.YARD_BOT_PAT }}
+          COMPOSER_AUTH_JSON: |
+            {
+              "http-basic": {
+                "packagist.yard.nl": {
+                  "username": "${{ secrets.YPACKAGIST_API_KEY }}",
+                  "password": "${{ secrets.YPACKAGIST_PASSWORD }}"
+                }
+              }
+            }
 
       - name: Setup problem matchers
         run: |
