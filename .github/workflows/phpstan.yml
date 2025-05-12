@@ -1,7 +1,13 @@
 name: PHPStan
 
 on:
-  - workflow_call
+  workflow_call:
+    inputs:
+      php-version:
+        description: 'The PHP version used to run the workflow.'
+        required: false
+        type: string
+        default: '8.1'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -20,7 +26,7 @@ jobs:
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: '8.1'
+                  php-version: ${{ inputs.php-version }}
                   tools: composer:v2
                   coverage: none
               env:
