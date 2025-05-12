@@ -1,7 +1,13 @@
 name: Create Badges
 
 on:
-  - workflow_call
+  workflow_call:
+    inputs:
+      php-version:
+        description: 'The PHP version used to run the workflow.'
+        required: false
+        type: string
+        default: '8.1'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,7 +29,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@2.31.1
         with:
-          php-version: '8.1'
+          php-version: ${{ inputs.php-version }}
           extensions:  simplexml, dom, xml, xdebug, intl
           tools: composer:v2
         env:
