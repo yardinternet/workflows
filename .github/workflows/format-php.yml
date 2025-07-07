@@ -1,4 +1,4 @@
-name: PHP CS Fixer
+name: Rector & PHP CS Fixer
 
 on:
   workflow_call:
@@ -46,17 +46,21 @@ jobs:
               }
             }
 
-      - name: Install composer dependencies
-        run: composer install --prefer-dist --no-interaction
+      - uses: "ramsey/composer-install@v3"
+
+      - name: Run Rector
+        run: vendor/bin/rector --ansi
 
       - name: Run PHP CS Fixer
-        run: ./vendor/bin/php-cs-fixer fix
+        run: vendor/bin/php-cs-fixer fix
         env:
           PHP_CS_FIXER_IGNORE_ENV: ${{ inputs.php-cs-fixer-ignore-env }}
 
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: '(auto): apply php-cs-fixer changes'
+          commit_message: '(auto): Rector & Coding Standards fixes'
+          commit_author: 'GitHub Action <actions@github.com>'
+          commit_user_email: 'action@github.com'
           push_options: '--force'
         env:
           GITHUB_TOKEN: ${{ secrets.YARD_BOT_PAT }}
