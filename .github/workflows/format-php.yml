@@ -7,7 +7,7 @@ on:
         description: 'The PHP version used to run the workflow.'
         required: false
         type: string
-        default: '8.1'
+        default: ''
       php-cs-fixer-ignore-env:
         description: 'Set to true to ignore PHP CS Fixer PHP version requirement'
         required: false
