@@ -24,13 +24,13 @@ jobs:
                 fetch-depth: 0
 
             - name: Setup PHP
-              uses: shivammathur/setup-php@v2
+              uses: shivammathur/setup-php@v2.35.1
               with:
                   php-version: ${{ inputs.php-version }}
                   tools: composer:v2
                   coverage: none
+                  github-token: ${{ secrets.YARD_BOT_PAT }}
               env:
-                  COMPOSER_TOKEN: ${{ secrets.YARD_BOT_PAT }}
                   COMPOSER_AUTH_JSON: |
                     {
                       "http-basic": {
