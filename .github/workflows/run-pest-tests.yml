@@ -41,8 +41,8 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo, xdebug
           coverage: xdebug
           tools: composer:v2
+          github-token: ${{ secrets.YARD_BOT_PAT }}
         env:
-          COMPOSER_TOKEN: ${{ secrets.YARD_BOT_PAT }}
           COMPOSER_AUTH_JSON: |
             {
               "http-basic": {
