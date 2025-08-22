@@ -43,7 +43,7 @@ jobs:
   test:
     uses: yardinternet/workflows/.github/workflows/run-laravel-testbench-tests.yml@main
     with:
-      php-versions: '["8.1"]'
+      php-versions: '["8.2"]'
       laravel-versions: '["10.*"]'
       testbench-versions: '["8.*"]'
     secrets: inherit
@@ -59,6 +59,6 @@ jobs:
   test:
     uses: yardinternet/workflows/.github/workflows/run-pest-tests.yml@main
     with:
-      php-versions: '["8.1"]'
+      php-versions: '["8.2"]'
     secrets: inherit
 ```

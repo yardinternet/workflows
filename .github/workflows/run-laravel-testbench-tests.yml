@@ -5,7 +5,7 @@ on:
     inputs:
       php-versions:
         description: 'Json array of PHP versions'
-        default: '["8.1","8.2"]'
+        default: '["8.2","8.3"]'
         type: string
       laravel-versions:
         description: 'Json array of Laravel versions'
