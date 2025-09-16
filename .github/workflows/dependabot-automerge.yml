@@ -1,23 +1,53 @@
 name: Dependabot automerge
 
 on:
-    - workflow_call
+  - workflow_call
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
-    contents: write
-    pull-requests: write
+  contents: write
+  pull-requests: write
 
 jobs:
-    dependabot:
-        runs-on: ubuntu-latest
-        if: github.event.pull_request.user.login == 'dependabot[bot]'
-        steps:
-            - name: Enable auto-merge for Dependabot PRs
-              run: gh pr comment "$PR_URL" --body "@dependabot merge"
-              env:
-                  PR_URL: ${{github.event.pull_request.html_url}}
-                  GH_TOKEN: ${{secrets.YARD_BOT_PAT}}
+  dependabot:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if pnpm-lock.yaml exists
+        id: check-lockfile
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            echo "lockfile=true" >> $GITHUB_OUTPUT
+          else
+            echo "lockfile=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up pnpm (latest)
+        if: steps.check-lockfile.outputs.lockfile == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Install dependencies (lockfile-only)
+        if: steps.check-lockfile.outputs.lockfile == 'true'
+        run: pnpm install --lockfile-only
+
+      - name: Commit updated pnpm-lock.yaml
+        if: steps.check-lockfile.outputs.lockfile == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update pnpm-lock.yaml"
+          file_pattern: "pnpm-lock.yaml"
+        env:
+          GITHUB_TOKEN: ${{ secrets.YARD_BOT_PAT }}
+
+      - name: Enable auto-merge for Dependabot PRs
+        run: gh pr comment "$PR_URL" --body "@dependabot merge"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.YARD_BOT_PAT }}
