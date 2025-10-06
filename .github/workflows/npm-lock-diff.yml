@@ -19,6 +19,7 @@ jobs:
         with:
           fetch-depth: 0 # Required to make it possible to compare with PR base branch
       - name: NPM Lockfile Changes
+        if: hashFiles('package-lock.json') != ''
         uses: rvanvelzen/npm-lockfile-changes@main
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
