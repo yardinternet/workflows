@@ -37,6 +37,10 @@ jobs:
                         "packagist.yard.nl": {
                           "username": "${{ secrets.YPACKAGIST_API_KEY }}",
                           "password": "${{ secrets.YPACKAGIST_PASSWORD }}"
+                        },
+                        "satis.yard.nl": {
+                            "username": "${{ secrets.SATIS_USERNAME }}",
+                            "password": "${{ secrets.SATIS_PASSWORD }}"
                         }
                       }
                     }
