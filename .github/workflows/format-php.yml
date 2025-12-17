@@ -58,6 +58,14 @@ jobs:
         env:
           PHP_CS_FIXER_IGNORE_ENV: ${{ inputs.php-cs-fixer-ignore-env }}
 
+      - name: "Import GPG key"
+        id: import-gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          git_commit_gpgsign: true
+
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'auto: apply php-cs-fixer changes'
