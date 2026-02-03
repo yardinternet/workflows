@@ -28,6 +28,10 @@ jobs:
           with-links: true
           with-licenses: true
 
+      - name: Check for WPackagist changes
+        if: ${{ hashFiles('wp-cli.yml') != '' }} # Only run if wp-cli.yml exists
+        uses: roots/wpackagist-changelog-action@v1
+
       - uses: marocchino/sticky-pull-request-comment@v2
         # An empty diff result will break this action.
         if: ${{ steps.composer_diff.outputs.composer_diff_exit_code != 0 }}
