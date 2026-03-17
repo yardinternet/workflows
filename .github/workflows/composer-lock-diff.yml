@@ -28,11 +28,28 @@ jobs:
           with-links: true
           with-licenses: true
 
-      - name: Check for WPackagist changes
-        if: ${{ hashFiles('wp-cli.yml') != '' }} # Only run if wp-cli.yml exists
+      - name: Detect WP Composer Repository (WPackagist or WP Composer)
+        id: detect_repo
+        run: |
+          if grep -q 'repo\.wp-composer\.com' composer.json; then
+            echo "repo=wp-composer" >> $GITHUB_OUTPUT
+          elif grep -q 'wpackagist\.org' composer.json; then
+            echo "repo=wpackagist" >> $GITHUB_OUTPUT
+          else
+            echo "repo=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: WPackagist Changelog
+        if: ${{ steps.detect_repo.outputs.repo == 'wpackagist' && hashFiles('wp-cli.yml') != '' }}
         uses: roots/wpackagist-changelog-action@v1
         with:
-          token: ${{ secrets.YARD_BOT_PAT }}
+          token: ${{ secrets.YARD_BOT_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: WP Composer Changelog
+        if: ${{ steps.detect_repo.outputs.repo == 'wp-composer' && hashFiles('wp-cli.yml') != '' }}
+        uses: roots/wp-composer-changelog-action@v2
+        with:
+          token: ${{ secrets.YARD_BOT_PAT || secrets.GITHUB_TOKEN }}
 
       - uses: marocchino/sticky-pull-request-comment@v2
         # An empty diff result will break this action.
