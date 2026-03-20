@@ -28,11 +28,11 @@ jobs:
           with-links: true
           with-licenses: true
 
-      - name: Detect WP Composer Repository (WPackagist or WP Composer)
+      - name: Detect WP Composer Repository (WPackagist or WP Packages)
         id: detect_repo
         run: |
-          if grep -q 'repo\.wp-composer\.com' composer.json; then
-            echo "repo=wp-composer" >> $GITHUB_OUTPUT
+          if grep -q 'repo\.wp-packages\.org' composer.json; then
+            echo "repo=wp-packages" >> $GITHUB_OUTPUT
           elif grep -q 'wpackagist\.org' composer.json; then
             echo "repo=wpackagist" >> $GITHUB_OUTPUT
           else
@@ -45,9 +45,9 @@ jobs:
         with:
           token: ${{ secrets.YARD_BOT_PAT || secrets.GITHUB_TOKEN }}
 
-      - name: WP Composer Changelog
-        if: ${{ steps.detect_repo.outputs.repo == 'wp-composer' && hashFiles('wp-cli.yml') != '' }}
-        uses: roots/wp-composer-changelog-action@v2
+      - name: WP Packages Changelog
+        if: ${{ steps.detect_repo.outputs.repo == 'wp-packages' && hashFiles('wp-cli.yml') != '' }}
+        uses: roots/wp-packages-changelog-action@v3
         with:
           token: ${{ secrets.YARD_BOT_PAT || secrets.GITHUB_TOKEN }}
 
