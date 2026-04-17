@@ -1,0 +1,50 @@
+**WordPress & Laravel Integration Security:**
+- Unsafe use of raw SQL queries (DB::select, DB::raw, $wpdb->query) with unsanitized user input instead of parameterized queries or Eloquent ORM
+- Missing WordPress sanitization functions (sanitize_text_field, esc_html, esc_attr, wp_kses) on user-supplied data rendered in templates
+- Improper use of WordPress nonces or missing CSRF validation on custom form handlers outside Laravel middleware
+- Direct access to superglobals ($_GET, $_POST, $_REQUEST) without validation in WordPress filters, actions, or ACF hooks
+- Insecure use of update_option(), update_post_meta(), or update_user_meta() with unvalidated input
+- Missing capability checks (current_user_can) before performing privileged operations in custom endpoints or AJAX handlers
+- WordPress REST API endpoints exposing sensitive data without proper authentication or permission callbacks
+
+**Dutch Municipal Data & Privacy (BIO/AVG/GDPR):**
+- BSN (Burgerservicenummer) stored in plaintext or logged without hashing — must always use irreversible hashing (see BsnHasher trait)
+- Personal citizen data (name, address, BSN, IBAN) exposed in API responses, logs, or error messages
+- Missing data minimization — collecting or returning more personal data than necessary for the operation
+- Citizen data transmitted over unencrypted channels or without TLS verification
+- Missing or inadequate access controls on pages or endpoints handling citizen information (WOO requests, permits, registrations)
+- Gravity Forms submissions containing personal data without proper access restrictions on entries
+- Missing data retention limits or automatic cleanup for citizen data stored in WordPress
+
+**External API & Integration Security:**
+- Hardcoded API credentials or tokens instead of using environment variables for OpenPub, OpenPDC, or OpenWOO clients
+- Missing SSL/TLS certificate verification (verify => false) on Guzzle HTTP client calls to external services
+- External API responses rendered without output escaping, enabling stored XSS via upstream data
+- Missing error handling on external API calls that could leak internal system details (hostnames, credentials, stack traces)
+- SSRF vulnerabilities through user-controllable URLs passed to HTTP clients
+- Missing timeout configuration on external API requests that could cause denial of service
+
+**Elasticsearch Security:**
+- Elasticsearch credentials (host URL with embedded username:password) exposed in client-side code, logs, or error output
+- Elasticsearch queries constructed with unsanitized user input allowing query injection
+- Elasticsearch indices exposing sensitive citizen data without proper access control
+- Missing input length limits on search queries that could cause resource exhaustion
+
+**Secrets & Configuration Exposure:**
+- Secrets, API keys, or license keys committed to version control or hardcoded in source files
+- WordPress debug mode (WP_DEBUG_DISPLAY) enabled in production or staging configurations
+- Sensitive environment variables (database credentials, API keys, license keys) exposed through phpinfo(), debug endpoints, or error pages
+- WordPress salts and authentication keys not properly configured or rotated
+- Deployment configuration (deploy.php) exposing internal server hostnames or paths
+
+**Content Security Policy & Header Integrity:**
+- CSP nonce injection bypassed or missing on dynamically inserted scripts or styles
+- Inline event handlers (onclick, onload) without proper CSP nonce coverage
+- Missing security headers (X-Frame-Options, X-Content-Type-Options) on custom API routes that bypass the SecureHeaders middleware
+- Overly permissive CORS configuration allowing unauthorized cross-origin access
+
+**WordPress Plugin & Dependency Risks:**
+- Known vulnerable versions of WordPress plugins (Gravity Forms, ACF Pro, Wordfence) without update paths
+- Custom plugin code using deprecated or insecure WordPress functions (mysql_query, create_function, extract)
+- Unvalidated file uploads through Gravity Forms or ACF file fields without type/size restrictions
+- User Switching plugin misuse allowing privilege escalation without audit logging
