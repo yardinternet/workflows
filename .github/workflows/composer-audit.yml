@@ -242,7 +242,11 @@ jobs:
           git switch -C "$branch"
           git add composer.lock
           git commit -m "fix(security): composer update for cleared advisories"
-          git push --force-with-lease origin "$branch"
+          # Plain --force: the runner only checks out the dispatch ref, so it has
+          # no remote-tracking baseline for this bot-managed branch and
+          # --force-with-lease would reject with "stale info". The branch is
+          # owned solely by this workflow, so a hard force is safe here.
+          git push --force origin "$branch"
 
           num=$(gh pr list --head "$branch" --state open --json number -q '.[0].number')
           if [ -n "$num" ]; then
