@@ -1,0 +1,228 @@
+# Reusable composer audit workflow. Consume via:
+#   uses: yardinternet/workflows/.github/workflows/composer-audit.yml@main
+#   with: { mode: gate | remediate }
+#
+# Two modes:
+#   gate      — run `composer audit` and fail if any advisory is present (used on Dependabot PRs)
+#   remediate — composer update vulnerable packages WITHIN existing constraints,
+#               open a security PR (lock-only) for what that clears, and file an
+#               issue for anything whose fix is out-of-range / unavailable.
+#
+# composer.json is NEVER rewritten. PR/issue creation uses the gh CLI only.
+
+name: Composer Audit
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: 'gate | remediate'
+        required: true
+        type: string
+      php-version:
+        description: 'PHP version to run under'
+        default: '8.2'
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.mode }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # GATE: pure check, fail the build if a known vulnerability remains.
+  # ---------------------------------------------------------------------------
+  gate:
+    if: inputs.mode == 'gate'
+    name: Audit gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php-version }}
+          tools: composer:v2
+          github-token: ${{ secrets.YARD_BOT_PAT }}
+        env:
+          COMPOSER_AUTH_JSON: |
+            {
+              "http-basic": {
+                "packagist.yard.nl": {
+                  "username": "${{ secrets.YPACKAGIST_API_KEY }}",
+                  "password": "${{ secrets.YPACKAGIST_PASSWORD }}"
+                },
+                "satis.yard.nl": {
+                  "username": "${{ secrets.SATIS_USERNAME }}",
+                  "password": "${{ secrets.SATIS_PASSWORD }}"
+                }
+              }
+            }
+
+      # Audits the committed lock file against the configured Composer
+      # repositories (incl. the SatisPress advisory endpoint). Exits non-zero
+      # when any advisory applies, which fails the job and blocks the PR.
+      - name: Composer audit
+        run: composer audit --locked --no-interaction
+
+  # ---------------------------------------------------------------------------
+  # REMEDIATE: in-constraint update -> security PR; out-of-range/unpatched -> issue.
+  # ---------------------------------------------------------------------------
+  remediate:
+    if: inputs.mode == 'remediate'
+    name: Audit remediate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php-version }}
+          tools: composer:v2
+          github-token: ${{ secrets.YARD_BOT_PAT }}
+        env:
+          COMPOSER_AUTH_JSON: |
+            {
+              "http-basic": {
+                "packagist.yard.nl": {
+                  "username": "${{ secrets.YPACKAGIST_API_KEY }}",
+                  "password": "${{ secrets.YPACKAGIST_PASSWORD }}"
+                },
+                "satis.yard.nl": {
+                  "username": "${{ secrets.SATIS_USERNAME }}",
+                  "password": "${{ secrets.SATIS_PASSWORD }}"
+                }
+              }
+            }
+
+      # composer audit exits non-zero when vulns are found; `|| true` keeps the
+      # step green so we can inspect the JSON ourselves.
+      - name: Audit before
+        run: composer audit --locked --format=json > before.json || true
+
+      - name: Collect vulnerable packages
+        id: vuln
+        run: |
+          # Top-level "advisories" is keyed by package name.
+          pkgs=$(jq -r '(.advisories // {}) | keys[]' before.json | sort -u | tr '\n' ' ')
+          echo "packages=$pkgs" >> "$GITHUB_OUTPUT"
+          if [ -z "$pkgs" ]; then
+            echo "No vulnerable packages found."
+          else
+            echo "Vulnerable: $pkgs"
+          fi
+
+      # Update only the flagged packages, staying within existing constraints.
+      # --no-security-blocking: composer 2.9+ otherwise REFUSES to resolve a
+      # version still covered by an advisory and errors out. We want the update
+      # to proceed regardless so the after-audit diff is the single source of
+      # truth for "cleared (-> PR)" vs "still vulnerable (-> issue)".
+      # --minimal-changes: keep the lock diff tight — move the vulnerable package
+      # to a safe version and only the deps that strictly must move, so the
+      # human-reviewed security PR is not buried in incidental bumps.
+      - name: Composer update (in-constraint)
+        if: steps.vuln.outputs.packages != ''
+        run: composer update ${{ steps.vuln.outputs.packages }} --with-dependencies --minimal-changes --no-interaction --no-security-blocking
+
+      - name: Audit after
+        if: steps.vuln.outputs.packages != ''
+        run: composer audit --locked --format=json > after.json || true
+
+      # Classify: cleared in-range (-> PR) vs still vulnerable (-> issue).
+      - name: Classify results
+        if: steps.vuln.outputs.packages != ''
+        id: classify
+        run: |
+          before_keys=$(jq -r '(.advisories // {}) | keys[]' before.json | sort -u)
+          after_keys=$(jq -r '(.advisories // {}) | keys[]' after.json | sort -u)
+
+          # still vulnerable after the in-constraint update
+          still=$(comm -12 <(echo "$before_keys") <(echo "$after_keys") | tr '\n' ' ')
+          # cleared by the update
+          cleared=$(comm -23 <(echo "$before_keys") <(echo "$after_keys") | tr '\n' ' ')
+
+          echo "still=$still" >> "$GITHUB_OUTPUT"
+          echo "cleared=$cleared" >> "$GITHUB_OUTPUT"
+
+          # Did the in-constraint update actually change the lock file?
+          if git diff --quiet -- composer.lock; then
+            echo "lock_changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "lock_changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Build a human-readable body for the unpatched issue, listing the
+          # blocking constraint per still-vulnerable package.
+          {
+            echo "The scheduled composer audit found vulnerabilities that could **not** be fixed within the current \`composer.json\` constraints (or have no fix available). A human needs to decide on a constraint bump."
+            echo
+            for pkg in $still; do
+              constraint=$(jq -r --arg p "$pkg" '(.require[$p] // .["require-dev"][$p]) // "n/a"' composer.json)
+              affected=$(jq -r --arg p "$pkg" '(.advisories[$p] // []) | map(.affectedVersions) | join(", ")' after.json)
+              echo "- **$pkg** — current constraint \`$constraint\`, affected: \`$affected\`"
+            done
+          } > issue-body.md
+
+      # Self-provision the labels so consumer repos need no manual setup.
+      # || true swallows the "already exists" error -> safe to run every time.
+      - name: Ensure labels exist
+        if: steps.vuln.outputs.packages != ''
+        env:
+          GH_TOKEN: ${{ secrets.YARD_BOT_PAT }}
+        run: |
+          gh label create security --color B60205 --description "Security fix" 2>/dev/null || true
+          gh label create security-unpatched --color D93F0B --description "Unpatched advisory" 2>/dev/null || true
+
+      # Open (or update) a single lock-only security PR for what the
+      # in-constraint update fixed. A STABLE branch + force-push means the
+      # nightly cron refreshes one living PR instead of spawning a new one each
+      # run; the gh pr list guard only creates when none is open.
+      - name: Open or update security PR
+        if: steps.classify.outputs.lock_changed == 'true' && steps.classify.outputs.cleared != ''
+        env:
+          GH_TOKEN: ${{ secrets.YARD_BOT_PAT }}
+        run: |
+          branch="security/composer-audit"
+          git config user.name "yard-bot"
+          git config user.email "bot@yard.nl"
+          git switch -C "$branch"
+          git add composer.lock
+          git commit -m "fix(security): composer update for ${{ steps.classify.outputs.cleared }}"
+          git push --force-with-lease origin "$branch"
+          if gh pr list --head "$branch" --state open --json number -q '.[0].number' | grep -q .; then
+            echo "PR already open for $branch — branch updated in place."
+          else
+            gh pr create \
+              --base "${{ github.ref_name }}" \
+              --head "$branch" \
+              --title "Security: composer audit fixes" \
+              --body "Automated in-constraint \`composer update\` resolving advisories for: ${{ steps.classify.outputs.cleared }}. Lock file only; **requires human review/merge**." \
+              --label security
+          fi
+
+      # File (or surface) an issue for anything still vulnerable, then fail.
+      - name: File unpatched issue
+        if: steps.classify.outputs.still != ''
+        env:
+          GH_TOKEN: ${{ secrets.YARD_BOT_PAT }}
+        run: |
+          gh issue create \
+            --title "Security: unpatched composer advisories (${{ steps.classify.outputs.still }})" \
+            --body-file issue-body.md \
+            --label security-unpatched
+
+      - name: Fail if anything remains unpatched
+        if: steps.classify.outputs.still != ''
+        run: |
+          echo "Still vulnerable after in-constraint update: ${{ steps.classify.outputs.still }}"
+          exit 1
