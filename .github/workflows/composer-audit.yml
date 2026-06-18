@@ -56,6 +56,10 @@ jobs:
                   "username": "${{ secrets.YPACKAGIST_API_KEY }}",
                   "password": "${{ secrets.YPACKAGIST_PASSWORD }}"
                 },
+                "packagist.wpacc01.yard.nl": {
+                  "username": "${{ secrets.WPACC_PACKAGIST_KEY }}",
+                  "password": "${{ secrets.WPACC_PACKAGIST_PASSWORD }}"
+                },
                 "satis.yard.nl": {
                   "username": "${{ secrets.SATIS_USERNAME }}",
                   "password": "${{ secrets.SATIS_PASSWORD }}"
@@ -98,6 +102,10 @@ jobs:
                   "username": "${{ secrets.YPACKAGIST_API_KEY }}",
                   "password": "${{ secrets.YPACKAGIST_PASSWORD }}"
                 },
+                "packagist.wpacc01.yard.nl": {
+                  "username": "${{ secrets.WPACC_PACKAGIST_KEY }}",
+                  "password": "${{ secrets.WPACC_PACKAGIST_PASSWORD }}"
+                },
                 "satis.yard.nl": {
                   "username": "${{ secrets.SATIS_USERNAME }}",
                   "password": "${{ secrets.SATIS_PASSWORD }}"
@@ -113,6 +121,16 @@ jobs:
       - name: Collect vulnerable packages
         id: vuln
         run: |
+          # Fail loudly if the audit output is not valid JSON. composer audit
+          # returns non-zero for BOTH "found vulns" and real errors (401, repo
+          # unreachable); the `|| true` above hides the latter. An invalid-JSON
+          # before.json means the audit never ran — treat as failure, not "clean",
+          # so a broken audit can never masquerade as "no vulnerabilities".
+          if ! jq -e . before.json >/dev/null 2>&1; then
+            echo "::error::composer audit did not return valid JSON — the audit failed (auth / unreachable advisory endpoint?). Raw output:"
+            cat before.json
+            exit 1
+          fi
           # Top-level "advisories" is keyed by package name.
           pkgs=$(jq -r '(.advisories // {}) | keys[]' before.json | sort -u | tr '\n' ' ')
           echo "packages=$pkgs" >> "$GITHUB_OUTPUT"
