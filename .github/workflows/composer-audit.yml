@@ -250,7 +250,11 @@ jobs:
 
           num=$(gh pr list --head "$branch" --state open --json number -q '.[0].number')
           if [ -n "$num" ]; then
-            gh pr edit "$num" --body-file pr-body.md
+            # REST PATCH instead of `gh pr edit`: the latter runs a GraphQL query
+            # that fetches org teams (login/name/slug) and needs read:org, which
+            # the bot token lacks. REST only needs repo scope.
+            jq -n --arg b "$(cat pr-body.md)" '{body: $b}' \
+              | gh api --method PATCH "repos/${{ github.repository }}/pulls/$num" --input - >/dev/null
             echo "PR #$num updated in place."
           else
             gh pr create \
@@ -271,9 +275,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.YARD_BOT_PAT }}
         run: |
-          num=$(gh issue list --state open --label security-unpatched --json number -q '.[0].number')
+          # REST instead of `gh issue list`/`gh issue edit`: those run GraphQL
+          # queries needing read:org (org teams), which the bot token lacks.
+          # The issues REST endpoint also returns PRs, so filter pull_request==null.
+          num=$(gh api "repos/${{ github.repository }}/issues?state=open&labels=security-unpatched" \
+            -q 'map(select(.pull_request == null)) | .[0].number // empty')
           if [ -n "$num" ]; then
-            gh issue edit "$num" --title "Security: unpatched composer advisories" --body-file issue-body.md
+            jq -n --arg t "Security: unpatched composer advisories" --arg b "$(cat issue-body.md)" '{title: $t, body: $b}' \
+              | gh api --method PATCH "repos/${{ github.repository }}/issues/$num" --input - >/dev/null
             echo "Issue #$num updated in place."
           else
             gh issue create \
