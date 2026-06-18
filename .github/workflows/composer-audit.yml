@@ -150,7 +150,9 @@ jobs:
       # human-reviewed security PR is not buried in incidental bumps.
       - name: Composer update (in-constraint)
         if: steps.vuln.outputs.packages != ''
-        run: composer update ${{ steps.vuln.outputs.packages }} --with-dependencies --minimal-changes --no-interaction --no-security-blocking
+        run: |
+          set -o pipefail
+          composer update ${{ steps.vuln.outputs.packages }} --with-dependencies --minimal-changes --no-interaction --no-security-blocking 2>&1 | tee composer-update.log
 
       - name: Audit after
         if: steps.vuln.outputs.packages != ''
@@ -182,12 +184,21 @@ jobs:
           # Build a human-readable body for the unpatched issue, listing the
           # blocking constraint per still-vulnerable package.
           {
-            echo "The scheduled composer audit found vulnerabilities that could **not** be fixed within the current \`composer.json\` constraints (or have no fix available). A human needs to decide on a constraint bump."
+            echo "Composer audit found advisories that could **not** be fixed within the current \`composer.json\` constraints (fix needs a major bump, or no safe version is published yet). A human needs to decide on a constraint change."
             echo
             for pkg in $still; do
               constraint=$(jq -r --arg p "$pkg" '(.require[$p] // .["require-dev"][$p]) // "n/a"' composer.json)
-              affected=$(jq -r --arg p "$pkg" '(.advisories[$p] // []) | map(.affectedVersions) | join(", ")' after.json)
-              echo "- **$pkg** — current constraint \`$constraint\`, affected: \`$affected\`"
+              # Highest affected version across this package's advisories — the
+              # constraint must be bumped above this to clear them.
+              highest=$(jq -r --arg p "$pkg" '(.advisories[$p] // []) | map(.affectedVersions) | join(" ")' after.json \
+                | grep -oE '[0-9]+(\.[0-9]+)+' | sort -V | tail -1)
+              echo "### \`$pkg\`"
+              echo "- Current constraint: \`$constraint\`"
+              [ -n "$highest" ] && echo "- Suggested: bump the constraint above \`$highest\` (highest affected version seen)"
+              echo "- Advisories:"
+              jq -r --arg p "$pkg" \
+                '(.advisories[$p] // [])[] | "  - [\(.cve // .advisoryId)](\(.link // "#")) — \(.title) — affected: `\(.affectedVersions)`"' after.json
+              echo
             done
           } > issue-body.md
 
@@ -213,34 +224,56 @@ jobs:
           branch="security/composer-audit"
           git config user.name "yard-bot"
           git config user.email "bot@yard.nl"
+
+          # Build a readable PR body: one line per package version change.
+          {
+            echo "Automated in-constraint \`composer update\` for security advisories."
+            echo "**Lock file only — requires human review and merge.**"
+            echo
+            echo "## Package changes"
+            grep -E '^[[:space:]]+- (Upgrading|Downgrading) ' composer-update.log \
+              | sed -E 's/^[[:space:]]+- (Upgrading|Downgrading) ([^ ]+) \(([^)]+) => ([^)]+)\)/- `\2` \3 → \4/' \
+              || true
+            echo
+            echo "## Advisories cleared"
+            for pkg in ${{ steps.classify.outputs.cleared }}; do echo "- \`$pkg\`"; done
+          } > pr-body.md
+
           git switch -C "$branch"
           git add composer.lock
-          git commit -m "fix(security): composer update for ${{ steps.classify.outputs.cleared }}"
+          git commit -m "fix(security): composer update for cleared advisories"
           git push --force-with-lease origin "$branch"
-          if gh pr list --head "$branch" --state open --json number -q '.[0].number' | grep -q .; then
-            echo "PR already open for $branch — branch updated in place."
+
+          num=$(gh pr list --head "$branch" --state open --json number -q '.[0].number')
+          if [ -n "$num" ]; then
+            gh pr edit "$num" --body-file pr-body.md
+            echo "PR #$num updated in place."
           else
             gh pr create \
               --base "${{ github.ref_name }}" \
               --head "$branch" \
               --title "Security: composer audit fixes" \
-              --body "Automated in-constraint \`composer update\` resolving advisories for: ${{ steps.classify.outputs.cleared }}. Lock file only; **requires human review/merge**." \
+              --body-file pr-body.md \
               --label security
           fi
 
-      # File (or surface) an issue for anything still vulnerable, then fail.
-      - name: File unpatched issue
+      # File OR update a single living issue for what's still unpatched. A
+      # stable title + label lets the nightly cron refresh one issue instead of
+      # spamming a new one each run. NOT a job failure: leftover major-bump work
+      # is expected and signalled by the issue, not a red run — only genuine
+      # malfunction (invalid audit JSON, above) fails the job.
+      - name: File or update unpatched issue
         if: steps.classify.outputs.still != ''
         env:
           GH_TOKEN: ${{ secrets.YARD_BOT_PAT }}
         run: |
-          gh issue create \
-            --title "Security: unpatched composer advisories (${{ steps.classify.outputs.still }})" \
-            --body-file issue-body.md \
-            --label security-unpatched
-
-      - name: Fail if anything remains unpatched
-        if: steps.classify.outputs.still != ''
-        run: |
-          echo "Still vulnerable after in-constraint update: ${{ steps.classify.outputs.still }}"
-          exit 1
+          num=$(gh issue list --state open --label security-unpatched --json number -q '.[0].number')
+          if [ -n "$num" ]; then
+            gh issue edit "$num" --title "Security: unpatched composer advisories" --body-file issue-body.md
+            echo "Issue #$num updated in place."
+          else
+            gh issue create \
+              --title "Security: unpatched composer advisories" \
+              --body-file issue-body.md \
+              --label security-unpatched
+          fi
