@@ -35,7 +35,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup PHP and install dependencies
-        uses: ./.github/actions/setup-php-composer
+        uses: yardinternet/workflows/.github/actions/setup-php-composer@feat/optimize-composer
         with:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo, xdebug

@@ -29,7 +29,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup PHP and install Composer dependencies
-        uses: ./.github/actions/setup-php-composer
+        uses: yardinternet/workflows/.github/actions/setup-php-composer@feat/optimize-composer
         with:
           php-version: ${{ inputs.php-version }}
           composer-command: composer install --prefer-dist --no-interaction
