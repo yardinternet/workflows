@@ -14,52 +14,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-    phpstan:
-        name: phpstan
-        runs-on: ubuntu-latest
-        timeout-minutes: 5
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                fetch-depth: 0
+  phpstan:
+    name: phpstan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-            - name: Setup PHP
-              uses: shivammathur/setup-php@v2
-              with:
-                  php-version: ${{ inputs.php-version }}
-                  tools: composer:v2
-                  coverage: none
-                  github-token: ${{ secrets.YARD_BOT_PAT }}
-              env:
-                  COMPOSER_AUTH_JSON: |
-                    {
-                      "http-basic": {
-                        "packagist.yard.nl": {
-                          "username": "${{ secrets.YPACKAGIST_API_KEY }}",
-                          "password": "${{ secrets.YPACKAGIST_PASSWORD }}"
-                        },
-                        "satis.yard.nl": {
-                            "username": "${{ secrets.SATIS_USERNAME }}",
-                            "password": "${{ secrets.SATIS_PASSWORD }}"
-                        }
-                      }
-                    }
+      - name: Setup PHP and install Composer dependencies
+        uses: ./.github/actions/setup-php-composer
+        with:
+          php-version: ${{ inputs.php-version }}
+          composer-command: composer install --prefer-dist --no-interaction
+          yard-bot-pat: ${{ secrets.YARD_BOT_PAT }}
+          ypackagist-api-key: ${{ secrets.YPACKAGIST_API_KEY }}
+          ypackagist-password: ${{ secrets.YPACKAGIST_PASSWORD }}
+          satis-username: ${{ secrets.SATIS_USERNAME }}
+          satis-password: ${{ secrets.SATIS_PASSWORD }}
 
-            - name: Install composer dependencies
-              run: composer install --prefer-dist --no-interaction
+      - name: Dirty fix for previously defined function in packages php stubs
+        run: |
+          if [ -f ./vendor/laravel/framework/src/Illuminate/Foundation/helpers.php ]; then
+            sed -i -e 's#function __(#function a__(#' ./vendor/laravel/framework/src/Illuminate/Foundation/helpers.php
+          fi
 
-            - name: Dirty fix for previously defined function in packages php stubs
-              run: |
-                if [ -f ./vendor/laravel/framework/src/Illuminate/Foundation/helpers.php ]; then
-                  sed -i -e 's#function __(#function a__(#' ./vendor/laravel/framework/src/Illuminate/Foundation/helpers.php
-                fi
+          if [ -f ./vendor/roots/acorn/src/Illuminate/Foundation/helpers.php ]; then
+            sed -i -e 's#function __(#function b__(#' ./vendor/roots/acorn/src/Illuminate/Foundation/helpers.php
+          fi
 
-                if [ -f ./vendor/roots/acorn/src/Illuminate/Foundation/helpers.php ]; then
-                  sed -i -e 's#function __(#function b__(#' ./vendor/roots/acorn/src/Illuminate/Foundation/helpers.php
-                fi
+          if [ -f ./vendor/larastan/larastan/stubs/common/Helpers.stub ]; then
+            sed -i -e 's#function __(#function c__(#' ./vendor/larastan/larastan/stubs/common/Helpers.stub
+          fi
 
-                if [ -f ./vendor/larastan/larastan/stubs/common/Helpers.stub ]; then
-                  sed -i -e 's#function __(#function c__(#' ./vendor/larastan/larastan/stubs/common/Helpers.stub
-                fi
-            - name: Run PHPStan
-              run: ./vendor/bin/phpstan --error-format=github
+      - name: Run PHPStan
+        run: ./vendor/bin/phpstan --error-format=github

@@ -34,48 +34,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - name: Setup PHP and install dependencies
+        uses: ./.github/actions/setup-php-composer
         with:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo, xdebug
           coverage: xdebug
-          tools: composer:v2
-          github-token: ${{ secrets.YARD_BOT_PAT }}
-        env:
-          COMPOSER_AUTH_JSON: |
-            {
-              "http-basic": {
-                "packagist.yard.nl": {
-                  "username": "${{ secrets.YPACKAGIST_API_KEY }}",
-                  "password": "${{ secrets.YPACKAGIST_PASSWORD }}"
-                },
-                "satis.yard.nl": {
-                  "username": "${{ secrets.SATIS_USERNAME }}",
-                  "password": "${{ secrets.SATIS_PASSWORD }}"
-                }
-              }
-            }
+          composer-command: composer update --prefer-dist --no-interaction
+          yard-bot-pat: ${{ secrets.YARD_BOT_PAT }}
+          ypackagist-api-key: ${{ secrets.YPACKAGIST_API_KEY }}
+          ypackagist-password: ${{ secrets.YPACKAGIST_PASSWORD }}
+          satis-username: ${{ secrets.SATIS_USERNAME }}
+          satis-password: ${{ secrets.SATIS_PASSWORD }}
 
       - name: Setup problem matchers
         run: |
           echo "::add-matcher::${{ runner.tool_cache }}/php.json"
           echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
-
-      - name: Get Composer Cache Directory
-        id: composer-cache
-        run: |
-          echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
-
-      - name: Install dependencies
-        run: |
-          composer update --prefer-dist --no-interaction
 
       - name: List Installed Dependencies
         run: composer show -D
