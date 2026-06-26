@@ -28,30 +28,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - name: Setup PHP and install Composer dependencies
+        uses: yardinternet/workflows/.github/actions/setup-php-composer@feat/optimize-composer
         with:
           php-version: ${{ inputs.php-version }}
-          tools: composer:v2
-          coverage: none
-          github-token: ${{ secrets.YARD_BOT_PAT }}
-        env:
-          COMPOSER_AUTH_JSON: |
-            {
-              "http-basic": {
-                "packagist.yard.nl": {
-                  "username": "${{ secrets.YPACKAGIST_API_KEY }}",
-                  "password": "${{ secrets.YPACKAGIST_PASSWORD }}"
-                },
-                "satis.yard.nl": {
-                  "username": "${{ secrets.SATIS_USERNAME }}",
-                  "password": "${{ secrets.SATIS_PASSWORD }}"
-                }
-              }
-            }
-
-      - name: Install composer dependencies
-        run: composer install --prefer-dist --no-interaction
+          composer-command: composer install --prefer-dist --no-interaction
+          yard-bot-pat: ${{ secrets.YARD_BOT_PAT }}
+          ypackagist-api-key: ${{ secrets.YPACKAGIST_API_KEY }}
+          ypackagist-password: ${{ secrets.YPACKAGIST_PASSWORD }}
+          satis-username: ${{ secrets.SATIS_USERNAME }}
+          satis-password: ${{ secrets.SATIS_PASSWORD }}
 
       - name: Run PHP CS Fixer
         run: ./vendor/bin/php-cs-fixer fix

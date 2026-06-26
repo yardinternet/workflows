@@ -1,0 +1,36 @@
+name: Composer Lock Diff
+description: Compares two composer.lock files and outputs the differences in a human-readable format.
+author: Yard Digital Agency
+branding:
+  icon: "lock" 
+  color: "gray-dark"
+
+runs:
+  using: composite
+  steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required to make it possible to compare with PR base branch
+
+      - name: Generate composer diff
+        id: composer_diff # To reference the output in comment
+        uses: IonBazan/composer-diff-action@v1
+        with:
+          with-platform: true
+          with-links: true
+          with-licenses: true
+
+      - uses: marocchino/sticky-pull-request-comment@v2
+        # An empty diff result will break this action.
+        if: ${{ steps.composer_diff.outputs.composer_diff_exit_code != 0 }}
+        with:
+          header: composer-diff # Creates a collapsed comment with the report
+          message: |
+            <details>
+            <summary>Composer package changes</summary>
+
+            ${{ steps.composer_diff.outputs.composer_diff }}
+
+            </details>
+
