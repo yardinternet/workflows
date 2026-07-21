@@ -1,0 +1,16 @@
+name: Dependabot automerge
+description: Automatically approves and merges Dependabot pull requests.
+inputs:
+  github-token:
+    description: GitHub token with write permissions to the repository.
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Enable auto-merge for Dependabot PRs
+      if: github.event.pull_request.user.login == 'dependabot[bot]'
+      shell: bash
+      run: gh pr review "$PR_URL" --approve && gh pr merge "$PR_URL" --admin --rebase
+      env:
+        PR_URL: ${{github.event.pull_request.html_url}}
+        GH_TOKEN: ${{inputs.github-token}}
