@@ -1,0 +1,97 @@
+name: Deploy
+description: Deploys the application.
+inputs:
+  github-token:
+    description: GitHub token for authentication.
+    required: true
+  op-service-account-token:
+    description: 1Password service account token.
+    required: true
+  selector:
+    description: The selector for deployer.
+    required: true
+  private-key:
+    description: The private key for SSH access.
+    required: true
+  ypackagist-api-key:
+    description: The API key for YPackagist.
+    required: true
+  ypackagist-password:
+    description: The password for YPackagist.
+    required: true
+  satis-username:
+    description: The username for Satis.
+    required: true
+  satis-password:
+    description: The password for Satis.
+    required: true
+  
+# outputs: //TODO: how to get the output of the deploy command and pass it to the next step
+
+    
+runs:
+  using: "composite"
+  steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ inputs.private-key }}
+          ssh-agent-cmd: /usr/bin/ssh-agent
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          tools: composer:v2
+          #TODO determine extensions needed for the project and deduplicate
+          github-token: ${{ inputs.github-token }}
+        env:
+          runner: self-hosted
+          COMPOSER_AUTH_JSON: |
+            {
+              "http-basic": {
+                "packagist.yard.nl": {
+                  "username": "${{ inputs.ypackagist-api-key }}",
+                  "password": "${{ inputs.ypackagist-password }}"
+                },
+                "satis.yard.nl": {
+                  "username": "${{ inputs.satis-username }}",
+                  "password": "${{ inputs.satis-password }}"
+                }
+              }
+            }
+
+      - name: Install composer dependencies
+        shell: bash
+        run: composer install --prefer-dist --no-interaction
+
+
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@yardinternet'
+
+      - uses: pnpm/action-setup@v6
+        if: hashFiles('pnpm-lock.yaml') != ''
+        name: Install pnpm
+        with:
+          cache: true
+
+      - name: Deploy
+        uses: deployphp/action@master
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ inputs.op-service-account-token }}
+          NODE_AUTH_TOKEN: ${{ inputs.github-token }}
+        with:
+          deployer-binary: vendor/bin/dep
+          dep: deploy ${{ inputs.selector }}
+          skip-ssh-setup: true
