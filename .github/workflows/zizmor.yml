@@ -4,12 +4,20 @@ on:
   push:
     branches: ["main"]
     paths:
-        - ./.github/workflows/*.yml
-        - ./**/action.yml
+      - ./.github/workflows/**.yml
+      - ./**/action.yml
   pull_request:
     paths:
-        - ./.github/workflows/*.yml
-        - ./**/action.yml
+      - ./.github/workflows/**.yml
+      - ./**/action.yml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   zizmor:
     runs-on: ubuntu-latest
