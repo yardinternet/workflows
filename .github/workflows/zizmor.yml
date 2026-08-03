@@ -4,11 +4,11 @@ on:
   push:
     branches: ["main"]
     paths:
-        - ./github.**.yml
+        - ./.github/workflows/*.yml
         - ./**/action.yml
   pull_request:
     paths:
-        - ./github.**.yml
+        - ./.github/workflows/*.yml
         - ./**/action.yml
 jobs:
   zizmor:
