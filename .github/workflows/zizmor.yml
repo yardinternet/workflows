@@ -3,26 +3,18 @@ name: GitHub Actions Security Analysis with zizmor 🌈
 on:
   push:
     branches: ["main"]
-    paths:
-      - ./.github/workflows/**.yml
-      - ./**/action.yml
   pull_request:
-    paths:
-      - ./.github/workflows/**.yml
-      - ./**/action.yml
+    branches: ["**"]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   zizmor:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
+      contents: read # only needed for private or internal repos
+      actions: read # only needed for private or internal repos
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
