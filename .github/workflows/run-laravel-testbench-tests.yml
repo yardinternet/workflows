@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       laravel-versions:
-        description: 'Json array of Laravel major constraints to test. Default = Acorn generations (acorn 4 = L10, acorn 5 = L12). Add "11.*" for non-acorn packages that support Laravel 11.'
+        description: 'Json array of Laravel major constraints. Default = Acorn generations (acorn 4 = L10, acorn 5 = L12). Add "11.*" for non-acorn packages that support Laravel 11.'
         default: '["10.*","12.*"]'
         type: string
 
@@ -21,13 +21,6 @@ jobs:
         php: ['8.2', '8.3', '8.4', '8.5']
         laravel: ${{ fromJSON(inputs.laravel-versions) }}
         stability: [prefer-lowest, prefer-stable]
-        include:
-          - laravel: '10.*'
-            testbench: '^8.37'
-          - laravel: '11.*'
-            testbench: '^9.16'
-          - laravel: '12.*'
-            testbench: '^10.9'
         exclude:
           - php: '8.4'
             laravel: '10.*'
@@ -76,9 +69,19 @@ jobs:
           echo "::add-matcher::${{ runner.tool_cache }}/php.json"
           echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
+      - name: Allow advisory-affected framework versions (compatibility testing, not deployment)
+        run: composer config --global policy.advisories.block false
+
       - name: Install dependencies (pin the Laravel generation via testbench)
         run: |
-          composer require "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          case "${{ matrix.laravel }}" in
+            10.*) TESTBENCH="^8.37" ;;
+            11.*) TESTBENCH="^9.16" ;;
+            12.*) TESTBENCH="^10.9" ;;
+            13.*) TESTBENCH="^11.0" ;;
+            *) echo "Unsupported Laravel version: ${{ matrix.laravel }}"; exit 1 ;;
+          esac
+          composer require "orchestra/testbench:${TESTBENCH}" --no-interaction --no-update
           composer update --${{ matrix.stability }} --prefer-dist --no-interaction
 
       - name: List installed dependencies
