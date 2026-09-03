@@ -25,9 +25,10 @@ inputs:
   satis-password:
     description: The password for Satis.
     required: true
+  known-hosts:
+    description: SSH known_hosts entries for the deploy targets.
+    required: true
   
-# outputs: //TODO: how to get the output of the deploy command and pass it to the next step
-
     
 runs:
   using: "composite"
@@ -42,6 +43,10 @@ runs:
         with:
           ssh-private-key: ${{ inputs.private-key }}
           ssh-agent-cmd: /usr/bin/ssh-agent
+
+      - name: Set known_hosts
+        shell: bash
+        run: echo "${{ inputs.known-hosts }}" > ~/.ssh/known_hosts
 
       - name: Install PHP
         uses: shivammathur/setup-php@v2
