@@ -1,0 +1,82 @@
+name: Deploy
+description: Deploys the application.
+inputs:
+  github-token:
+    description: GitHub token for authentication.
+    required: true
+  op-service-account-token:
+    description: 1Password service account token.
+    required: true
+  selector:
+    description: The selector for deployer.
+    required: true
+  private-key:
+    description: The private key for SSH access.
+    required: true
+  composer-auth-json:
+    description: full composer auth json
+    required: true
+  known-hosts:
+    description: SSH known_hosts entries for the deploy targets.
+    required: true
+  
+    
+runs:
+  using: "composite"
+  steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ inputs.private-key }}
+          ssh-agent-cmd: /usr/bin/ssh-agent
+
+      - name: Set known_hosts
+        shell: bash
+        run: echo "${{ inputs.known-hosts }}" > ~/.ssh/known_hosts
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          tools: composer:v2
+          #TODO determine extensions needed for the project and deduplicate
+          github-token: ${{ inputs.github-token }}
+        env:
+          runner: self-hosted
+          COMPOSER_AUTH_JSON: ${{ inputs.composer-auth-json }}
+      - name: Install composer dependencies
+        shell: bash
+        run: composer install --prefer-dist --no-interaction
+
+
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@v4
+
+      - name: Install Node.js
+        if: hashFiles('.nvmrc') != ''
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@yardinternet'
+
+      - uses: pnpm/action-setup@v6
+        if: hashFiles('pnpm-lock.yaml') != ''
+        name: Install pnpm
+        with:
+          cache: true
+
+      - name: Deploy
+        uses: deployphp/action@master
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ inputs.op-service-account-token }}
+          NODE_AUTH_TOKEN: ${{ inputs.github-token }}
+          GITHUB_TOKEN: ${{ inputs.github-token }}
+        with:
+          deployer-binary: vendor/bin/dep
+          dep: deploy ${{ inputs.selector }}
+          skip-ssh-setup: true
