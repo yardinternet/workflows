@@ -13,17 +13,8 @@ inputs:
   private-key:
     description: The private key for SSH access.
     required: true
-  ypackagist-api-key:
-    description: The API key for YPackagist.
-    required: true
-  ypackagist-password:
-    description: The password for YPackagist.
-    required: true
-  satis-username:
-    description: The username for Satis.
-    required: true
-  satis-password:
-    description: The password for Satis.
+  composer-auth-json:
+    description: full composer auth json
     required: true
   known-hosts:
     description: SSH known_hosts entries for the deploy targets.
@@ -56,20 +47,7 @@ runs:
           github-token: ${{ inputs.github-token }}
         env:
           runner: self-hosted
-          COMPOSER_AUTH_JSON: |
-            {
-              "http-basic": {
-                "packagist.yard.nl": {
-                  "username": "${{ inputs.ypackagist-api-key }}",
-                  "password": "${{ inputs.ypackagist-password }}"
-                },
-                "satis.yard.nl": {
-                  "username": "${{ inputs.satis-username }}",
-                  "password": "${{ inputs.satis-password }}"
-                }
-              }
-            }
-
+          COMPOSER_AUTH_JSON: ${{ inputs.composer-auth-json }}
       - name: Install composer dependencies
         shell: bash
         run: composer install --prefer-dist --no-interaction
