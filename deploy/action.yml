@@ -92,6 +92,7 @@ runs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ inputs.op-service-account-token }}
           NODE_AUTH_TOKEN: ${{ inputs.github-token }}
+          GITHUB_TOKEN: ${{ inputs.github-token }}
         with:
           deployer-binary: vendor/bin/dep
           dep: deploy ${{ inputs.selector }}
