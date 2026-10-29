@@ -80,3 +80,7 @@ runs:
           deployer-binary: vendor/bin/dep
           dep: deploy ${{ inputs.selector }}
           skip-ssh-setup: true
+      - name: Cleanup
+        if: always()
+        shell: bash
+        run: rm -rf "$GITHUB_WORKSPACE"
