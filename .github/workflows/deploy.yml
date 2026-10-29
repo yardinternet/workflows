@@ -17,7 +17,7 @@ jobs:
     runs-on: self-hosted
     environment: ${{ inputs.environment }}
     steps:
-      - uses: ./.github/workflows/deploy/action.yml
+      - uses: ./.github/deploy/action.yml
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           op-service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
