@@ -24,4 +24,16 @@ jobs:
           private-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
           selector: stage=${{ inputs.environment }}
           known-hosts: ${{ vars.KNOWN_HOSTS }}
-          composer-auth-json: ${{ secrets.COMPOSER_AUTH_JSON }}
+          composer-auth-json: |
+                    {
+                      "http-basic": {
+                        "packagist.yard.nl": {
+                          "username": "${{ secrets.YPACKAGIST_API_KEY }}",
+                          "password": "${{ secrets.YPACKAGIST_PASSWORD }}"
+                        },
+                        "satis.yard.nl": {
+                            "username": "${{ secrets.SATIS_USERNAME }}",
+                            "password": "${{ secrets.SATIS_PASSWORD }}"
+                        }
+                      }
+                    }
