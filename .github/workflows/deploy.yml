@@ -17,7 +17,7 @@ jobs:
     runs-on: self-hosted
     environment: ${{ inputs.environment }}
     steps:
-      - uses: yardinternet/workflows/deploy@feat/deploy
+      - uses: yardinternet/workflows/deploy
         with:
           github-token: ${{ secrets.YARD_BOT_PAT }}
           op-service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
