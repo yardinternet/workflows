@@ -83,4 +83,4 @@ runs:
       - name: Cleanup
         if: always()
         shell: bash
-        run: rm -rf "$GITHUB_WORKSPACE"
+        run: rm -rf ${{ github.workspace }}/*
