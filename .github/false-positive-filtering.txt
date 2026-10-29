@@ -1,0 +1,5 @@
+HARD EXCLUSIONS - Automatically exclude findings matching these patterns:
+
+SIGNAL QUALITY CRITERIA - For remaining findings, assess:
+
+PRECEDENTS - Specific guidance for common security patterns in your environment:
