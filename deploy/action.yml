@@ -46,7 +46,8 @@ runs:
         uses: shivammathur/setup-php@v2
         with:
           tools: composer:v2
-          #TODO determine extensions needed for the project and deduplicate
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_mysql, mysqli, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
+          coverage: none
           github-token: ${{ inputs.github-token }}
         env:
           runner: self-hosted
