@@ -19,9 +19,9 @@ jobs:
     steps:
       - uses: yardinternet/workflows/deploy@feat/deploy
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.YARD_BOT_PAT }}
           op-service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          private-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
           selector: stage=${{ inputs.environment }}
-          known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          known-hosts: ${{ vars.KNOWN_HOSTS }}
           composer-auth-json: ${{ secrets.COMPOSER_AUTH_JSON }}
