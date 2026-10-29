@@ -1,0 +1,27 @@
+name: Deploy
+on: 
+    workflow_call:
+        inputs:
+            environment:
+                required: true
+                type: string
+                default: production
+                description: Deployment environment
+
+concurrency:
+  group: deploy
+  queue: max
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: ./.github/workflows/deploy/action.yml
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          op-service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          selector: stage=${{ inputs.environment }}
+          known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          composer-auth-json: ${{ secrets.COMPOSER_AUTH_JSON }}
