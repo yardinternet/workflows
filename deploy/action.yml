@@ -24,6 +24,9 @@ inputs:
 runs:
   using: "composite"
   steps:
+      - name: Clean after
+        uses: mickem/clean-after-action@v2
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -80,7 +83,3 @@ runs:
           deployer-binary: vendor/bin/dep
           dep: deploy ${{ inputs.selector }}
           skip-ssh-setup: true
-      - name: Cleanup
-        if: always()
-        shell: bash
-        run: rm -rf ${{ github.workspace }}/*
