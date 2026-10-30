@@ -9,9 +9,8 @@ on:
                 description: Deployment environment
 
 concurrency:
-  group: deploy
-  queue: max
-
+  group: deploy-${{ inputs.environment }}
+  queue: single
 jobs:
   deploy:
     runs-on: self-hosted
