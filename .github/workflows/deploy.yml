@@ -9,7 +9,7 @@ on:
                 description: Deployment environment
 
 concurrency:
-  group: deploy
+  group: deploy-${{ inputs.environment }}
   queue: single
 jobs:
   deploy:
