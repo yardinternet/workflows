@@ -10,8 +10,7 @@ on:
 
 concurrency:
   group: deploy
-  queue: max
-
+  queue: single
 jobs:
   deploy:
     runs-on: self-hosted
