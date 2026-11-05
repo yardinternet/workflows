@@ -28,29 +28,6 @@ jobs:
           with-links: true
           with-licenses: true
 
-      - name: Detect WP Composer Repository (WPackagist or WP Packages)
-        id: detect_repo
-        run: |
-          if grep -q 'repo\.wp-packages\.org' composer.json; then
-            echo "repo=wp-packages" >> $GITHUB_OUTPUT
-          elif grep -q 'wpackagist\.org' composer.json; then
-            echo "repo=wpackagist" >> $GITHUB_OUTPUT
-          else
-            echo "repo=" >> $GITHUB_OUTPUT
-          fi
-
-      - name: WPackagist Changelog
-        if: ${{ steps.detect_repo.outputs.repo == 'wpackagist' && hashFiles('wp-cli.yml') != '' }}
-        uses: roots/wpackagist-changelog-action@v1
-        with:
-          token: ${{ secrets.YARD_BOT_PAT || secrets.GITHUB_TOKEN }}
-
-      - name: WP Packages Changelog
-        if: ${{ steps.detect_repo.outputs.repo == 'wp-packages' && hashFiles('wp-cli.yml') != '' }}
-        uses: roots/wp-packages-changelog-action@v3
-        with:
-          token: ${{ secrets.YARD_BOT_PAT || secrets.GITHUB_TOKEN }}
-
       - uses: marocchino/sticky-pull-request-comment@v2
         # An empty diff result will break this action.
         if: ${{ steps.composer_diff.outputs.composer_diff_exit_code != 0 }}
