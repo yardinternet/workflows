@@ -1,0 +1,27 @@
+name: PHP CS Fixer
+
+on:
+  workflow_call:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php-cs-fixer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: yardinternet/workflows/setup-environment@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          composer-auth-json: ${{ secrets.COMPOSER_AUTH_JSON }}
+      - uses: yardinternet/workflows/format-php@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+          php-cs-fixer-ignore-env: 1 
+
+
+    # php stan
+    # tests
