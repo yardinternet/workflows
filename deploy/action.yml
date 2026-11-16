@@ -84,3 +84,4 @@ runs:
           deployer-binary: vendor/bin/dep
           dep: deploy ${{ inputs.selector }}
           skip-ssh-setup: true
+          verbosity: ${{ runner.debug == '1' && '-v' || '' }}
