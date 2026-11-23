@@ -16,7 +16,26 @@ jobs:
     runs-on: self-hosted
     environment: ${{ inputs.environment }}
     steps:
+      # The deploy always ships the branch HEAD, not the triggering commit.
+      # When a newer commit has been pushed, its own run will deploy it, so
+      # this run would only duplicate that deploy.
+      - name: Skip if a newer commit is on the branch
+        id: freshness
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.YARD_BOT_PAT }}
+        run: |
+          head=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github.sha" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$GITHUB_REF_NAME")
+          if [ "$head" != "$GITHUB_SHA" ]; then
+            echo "::notice::Newer commit $head on $GITHUB_REF_NAME; its run will deploy it. Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: yardinternet/workflows/deploy@main
+        if: steps.freshness.outputs.skip != 'true'
         with:
           github-token: ${{ secrets.YARD_BOT_PAT }}
           op-service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
