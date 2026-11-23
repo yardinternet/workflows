@@ -82,6 +82,6 @@ runs:
           GITHUB_TOKEN: ${{ inputs.github-token }}
         with:
           deployer-binary: vendor/bin/dep
-          dep: deploy ${{ inputs.selector }}
+          dep: deploy ${{ inputs.selector }} --revision=${{ github.sha }}
           skip-ssh-setup: true
           verbosity: ${{ runner.debug == '1' && '-v' || '' }}
